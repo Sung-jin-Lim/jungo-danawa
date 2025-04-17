@@ -23,7 +23,7 @@ export default class DanggeunScraper {
 
       console.log('Danggeun URL:', url);
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
-      await page.waitForSelector('a[data-gtm="search_article"]', { timeout: 10000 });
+      await page.waitForSelector('a[data-gtm="search_article"]', { timeout: 20000 });
 
       const html = await page.content();
       const $ = load(html);
@@ -38,7 +38,9 @@ export default class DanggeunScraper {
         const price = parseInt(priceTxt.replace(/[^0-9]/g, ''), 10) || null;
         const location = card.find('span.lm809sj').first().text().trim();
 
-        let img = card.find('img').attr('src') || '';
+        let img = card.find('img').attr('src') ||
+          card.find('.lm809sg').attr('src') ||
+          '';
         if (img.startsWith('//')) img = 'https:' + img;
 
         const relUrl = card.attr('href');

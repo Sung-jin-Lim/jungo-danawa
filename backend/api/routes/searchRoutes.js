@@ -11,39 +11,56 @@ const router = express.Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const { query, sources = ['danggeun', 'coupang'], limit = 20 } = req.body;
+    const { query, limit = 20 } = req.body;
     if (!query) {
       return res.status(400).json({ message: 'Search query is required' });
     }
 
-    // Dynamically import scrapers to support CommonJS modules
+    // --- Normalize sources into an array ---
+    let sources = req.body.sources;
+    if (!Array.isArray(sources)) {
+      if (typeof sources === 'string') {
+        // allow comma‑separated or single string
+        sources = sources.includes(',')
+          ? sources.split(',').map(s => s.trim())
+          : [sources];
+      } else {
+        // default to both if missing/invalid
+        sources = ['danggeun', 'coupang'];
+      }
+    }
+
+    // Dynamically import scrapers only if requested
     const imports = await Promise.all([
       sources.includes('danggeun')
         ? import('../../scrapers/danggeunScraper.js')
         : Promise.resolve(null),
       sources.includes('coupang')
         ? import('../../scrapers/coupangScraper.js')
-        : Promise.resolve(null)
+        : Promise.resolve(null),
     ]);
 
     const DanggeunScraper = imports[0]?.default;
     const CoupangScraper = imports[1]?.default;
 
-    // Instantiate scrapers conditionally
+    // Launch scrapes
     const tasks = [];
-    if (DanggeunScraper) tasks.push(new DanggeunScraper().searchProducts(query, limit));
-    if (CoupangScraper) tasks.push(new CoupangScraper().searchProducts(query, limit));
+    if (DanggeunScraper) {
+      tasks.push(new DanggeunScraper().searchProducts(query, limit));
+    }
+    if (CoupangScraper) {
+      tasks.push(new CoupangScraper().searchProducts(query, limit));
+    }
 
-    // Execute scraping
     const results = await Promise.all(tasks);
     const products = results.flat();
 
-    // Save to DB (ignore duplicates)
+    // Save to DB (ignoring duplicates)
     await Product.insertMany(products, { ordered: false }).catch(() => { });
 
     res.json({
       query,
-      sources: sources.filter(s => s === 'danggeun' || s === 'coupang'),
+      sources: sources.filter(s => ['danggeun', 'coupang'].includes(s)),
       count: products.length,
       products,
     });
@@ -65,7 +82,7 @@ router.get('/compare', async (req, res) => {
       return res.status(400).json({ message: 'Search query is required' });
     }
 
-    // Dynamic import
+    // Always import both scrapers for comparison
     const [{ default: DanggeunScraper }, { default: CoupangScraper }] =
       await Promise.all([
         import('../../scrapers/danggeunScraper.js'),
@@ -94,10 +111,16 @@ router.get('/compare', async (req, res) => {
       platform = 'coupang';
     }
 
-    const disparity = bestDeal !== null && marketPrice ? marketPrice - bestDeal : null;
-    const disparityPct = disparity !== null ? (disparity / marketPrice) * 100 : null;
+    const disparity =
+      bestDeal !== null && marketPrice !== null
+        ? marketPrice - bestDeal
+        : null;
+    const disparityPct =
+      disparity !== null && marketPrice
+        ? (disparity / marketPrice) * 100
+        : null;
 
-    // Save scraped items
+    // Persist items
     const allProducts = [...dangProducts, ...coupProducts];
     await Product.insertMany(allProducts, { ordered: false }).catch(() => { });
 
@@ -110,7 +133,7 @@ router.get('/compare', async (req, res) => {
         bestDeal: { price: bestDeal, platform },
         disparity,
         disparityPercentage: disparityPct,
-      }
+      },
     });
   } catch (error) {
     console.error('Comparison error:', error);

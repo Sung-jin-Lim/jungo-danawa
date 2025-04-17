@@ -11,32 +11,44 @@ export default class CoupangScraper {
   async searchProducts(query, limit = 20) {
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     try {
       const page = await browser.newPage();
       await page.setViewport({ width: 1280, height: 800 });
       await page.setUserAgent(
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)…'
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'
       );
 
       const url = `${this.searchUrl}${encodeURIComponent(query)}`;
       await page.goto(url, { waitUntil: 'networkidle2' });
-      await page.waitForSelector('.search-product');
+      await page.waitForSelector('.search-product', { timeout: 15000 });
+
+      // Scroll to bottom to trigger lazy-loading
+      await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight));
+      // Pause briefly to allow images to load
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const html = await page.content();
-      const $ = load(html);           // ← use load()
-
+      const $ = load(html);
       const products = [];
+
       $('.search-product').each((i, el) => {
         if (i >= limit) return false;
         const card = $(el);
         const title = card.find('.name').text().trim();
         const priceText = card.find('.price-value').text().trim();
         const price = parseInt(priceText.replace(/[^0-9]/g, ''), 10) || null;
-        let imageUrl = card.find('img.search-product-wrap-img').attr('src') || '';
-        if (imageUrl && !imageUrl.startsWith('http')) imageUrl = 'https:' + imageUrl;
+
+        // Prefer data-src for actual image URL
+        const imgEl = card.find('img.search-product-wrap-img');
+        let imageUrl =
+          imgEl.attr('src') ||
+          imgEl.attr('data-img-src') ||
+          imgEl.attr('img-src') || '';
+        if (imageUrl.startsWith('//')) imageUrl = 'https:' + imageUrl;
+
         const relUrl = card.find('a.search-product-link').attr('href') || '';
         const productUrl = this.baseUrl + relUrl;
 
@@ -48,7 +60,7 @@ export default class CoupangScraper {
             priceText,
             imageUrl,
             productUrl,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           });
         }
       });

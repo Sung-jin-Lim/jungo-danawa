@@ -62,9 +62,9 @@ const HomePage = () => {
   const popularCategories = [
     { name: "Smartphones", image: "https://via.placeholder.com/150?text=Smartphones" },
     { name: "Laptops", image: "https://via.placeholder.com/150?text=Laptops" },
-    { name: "Tablets", image: "https://via.placeholder.com/150?text=Tablets" },
-    { name: "Cameras", image: "https://via.placeholder.com/150?text=Cameras" },
-    { name: "Gaming", image: "https://via.placeholder.com/150?text=Gaming" },
+    // { name: "Tablets", image: "https://via.placeholder.com/150?text=Tablets" },
+    // { name: "Cameras", image: "https://via.placeholder.com/150?text=Cameras" },
+    // { name: "Gaming", image: "https://via.placeholder.com/150?text=Gaming" },
     { name: "Audio", image: "https://via.placeholder.com/150?text=Audio" },
   ];
 
@@ -94,7 +94,7 @@ const HomePage = () => {
             bottom: 0,
             right: 0,
             left: 0,
-            backgroundColor: "rgba(0,0,0,.5)",
+            backgroundColor: "rgb(255, 77, 77)",
           }}
         />
         <Container maxWidth="md" sx={{ position: "relative", py: 8 }}>
@@ -172,45 +172,6 @@ const HomePage = () => {
       </Container>
 
       <Divider sx={{ mb: 8 }} />
-
-      {/* Popular Categories */}
-      <Container maxWidth="lg" sx={{ mb: 8 }}>
-        <Typography variant="h4" component="h2" gutterBottom align="center" sx={{ mb: 4 }}>
-          Popular Categories
-        </Typography>
-        <Grid container spacing={3}>
-          {popularCategories.map((category, index) => (
-            <Grid item xs={6} sm={4} md={2} key={index}>
-              <Card
-                sx={{
-                  height: "100%",
-                  display: "flex",
-                  flexDirection: "column",
-                  cursor: "pointer",
-                  transition: "0.3s",
-                  "&:hover": {
-                    transform: "scale(1.05)",
-                    boxShadow: 4,
-                  },
-                }}
-                onClick={() => navigate(`/search?category=${encodeURIComponent(category.name)}`)}
-              >
-                <CardMedia
-                  component="img"
-                  height="140"
-                  image={category.image}
-                  alt={category.name}
-                />
-                <CardContent sx={{ flexGrow: 1, textAlign: "center" }}>
-                  <Typography gutterBottom variant="h6" component="h3">
-                    {category.name}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
 
       {/* Call to Action */}
       <Box
