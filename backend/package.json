@@ -1,0 +1,26 @@
+{
+  "name": "jungo-danawa-backend",
+  "version": "1.0.0",
+  "description": "Backend for Jungo-Danawa web platform",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "npx nodemon server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.2.1",
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^4.18.2",
+    "mongoose": "^8.0.1",
+    "puppeteer": "^24.6.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.1"
+  }
+}
