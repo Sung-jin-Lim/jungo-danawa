@@ -2,6 +2,23 @@
 import puppeteer from 'puppeteer';
 import { load } from 'cheerio';
 
+async function autoScroll(page) {
+  await page.evaluate(async () => {
+    await new Promise((resolve) => {
+      let total = 0;
+      const distance = 100;
+      const timer = setInterval(() => {
+        window.scrollBy(0, distance);
+        total += distance;
+        if (total >= document.body.scrollHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 100);
+    });
+  });
+}
+
 export default class DanggeunScraper {
   constructor() {
     this.baseUrl = 'https://www.daangn.com';
@@ -25,22 +42,24 @@ export default class DanggeunScraper {
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
       await page.waitForSelector('a[data-gtm="search_article"]', { timeout: 20000 });
 
+      // scroll through the page to trigger lazy‐load
+      await autoScroll(page);
+      // short pause to let images load
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       const html = await page.content();
       const $ = load(html);
       const products = [];
 
       $('a[data-gtm="search_article"]').each((i, el) => {
         if (i >= limit) return false;
-
         const card = $(el);
         const title = card.find('span.lm809sh').text().trim();
         const priceTxt = card.find('span.lm809si').text().trim();
         const price = parseInt(priceTxt.replace(/[^0-9]/g, ''), 10) || null;
         const location = card.find('span.lm809sj').first().text().trim();
 
-        let img = card.find('img').attr('src') ||
-          card.find('.lm809sg').attr('src') ||
-          '';
+        let img = card.find('img').attr('src') || '';
         if (img.startsWith('//')) img = 'https:' + img;
 
         const relUrl = card.attr('href');

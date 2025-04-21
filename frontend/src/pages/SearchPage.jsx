@@ -47,7 +47,7 @@ const SearchPage = () => {
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [priceRange, setPriceRange] = useState([0, 1000000]);
-  const [selectedSources, setSelectedSources] = useState(["danggeun", "coupang"]);
+  const [selectedSources, setSelectedSources] = useState(["danggeun", "coupang", "bunjang"]);
   const [sortBy, setSortBy] = useState("price_asc");
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -55,6 +55,7 @@ const SearchPage = () => {
     { label: "All", value: null },
     { label: "Danggeun", value: "danggeun" },
     { label: "Coupang", value: "coupang" },
+    { label: "Bunjang", value: "bunjang" },
   ];
 
   // Format price
@@ -64,10 +65,14 @@ const SearchPage = () => {
       .replace("₩", "") + "원";
 
   // Source labels
-  const getSourceName = (src) => ({ danggeun: "당근마켓", coupang: "쿠팡" }[src] || src);
+  const getSourceName = (src) =>
+    ({ danggeun: "당근마켓", coupang: "쿠팡", bunjang: "번게장터" }[src] || src);
   const getSourceColor = (src) =>
-    ({ danggeun: theme.palette.warning.main, coupang: theme.palette.primary.main }[src] ||
-    theme.palette.primary.main);
+    ({
+      danggeun: theme.palette.warning.main,
+      coupang: theme.palette.primary.main,
+      bunjang: theme.palette.success.main,
+    }[src] || theme.palette.primary.main);
 
   // Perform search
   const doSearch = async () => {
@@ -189,6 +194,7 @@ const SearchPage = () => {
               >
                 <MenuItem value="danggeun">당근마켓</MenuItem>
                 <MenuItem value="coupang">쿠팡</MenuItem>
+                <MenuItem value="bunjang">번개장터</MenuItem>
               </Select>
             </FormControl>
           </Grid>

@@ -1,4 +1,3 @@
-// File: backend/api/routes/searchRoutes.js
 import express from 'express';
 import Product from '../../models/Product.js';
 
@@ -6,7 +5,7 @@ const router = express.Router();
 
 /**
  * @route   POST /api/search
- * @desc    Search for products across Danggeun and Coupang
+ * @desc    Search for products across Danggeun, Coupang, and Bunjang
  * @access  Public
  */
 router.post('/', async (req, res) => {
@@ -16,17 +15,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Search query is required' });
     }
 
-    // --- Normalize sources into an array ---
+    // Normalize sources into an array, defaulting to all
     let sources = req.body.sources;
     if (!Array.isArray(sources)) {
       if (typeof sources === 'string') {
-        // allow comma‑separated or single string
         sources = sources.includes(',')
           ? sources.split(',').map(s => s.trim())
           : [sources];
       } else {
-        // default to both if missing/invalid
-        sources = ['danggeun', 'coupang'];
+        sources = ['danggeun', 'coupang', 'bunjang'];
       }
     }
 
@@ -38,21 +35,22 @@ router.post('/', async (req, res) => {
       sources.includes('coupang')
         ? import('../../scrapers/coupangScraper.js')
         : Promise.resolve(null),
+      sources.includes('bunjang')
+        ? import('../../scrapers/bunjangScraper.js')
+        : Promise.resolve(null),
     ]);
 
     const DanggeunScraper = imports[0]?.default;
     const CoupangScraper = imports[1]?.default;
+    const BunjangScraper = imports[2]?.default;
 
     // Launch scrapes
     const tasks = [];
-    if (DanggeunScraper) {
-      tasks.push(new DanggeunScraper().searchProducts(query, limit));
-    }
-    if (CoupangScraper) {
-      tasks.push(new CoupangScraper().searchProducts(query, limit));
-    }
+    if (DanggeunScraper) tasks.push(new DanggeunScraper().searchProducts(query, limit));
+    if (CoupangScraper) tasks.push(new CoupangScraper().searchProducts(query, limit));
+    if (BunjangScraper) tasks.push(new BunjangScraper().searchProducts(query, limit));
 
-    const results = await Promise.all(tasks); //stalls here ----
+    const results = await Promise.all(tasks);
     const products = results.flat();
 
     // Save to DB (ignoring duplicates)
@@ -60,7 +58,7 @@ router.post('/', async (req, res) => {
 
     res.json({
       query,
-      sources: sources.filter(s => ['danggeun', 'coupang'].includes(s)),
+      sources: sources.filter(s => ['danggeun', 'coupang', 'bunjang'].includes(s)),
       count: products.length,
       products,
     });
