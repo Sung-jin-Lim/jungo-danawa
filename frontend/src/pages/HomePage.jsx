@@ -94,7 +94,7 @@ const HomePage = () => {
             bottom: 0,
             right: 0,
             left: 0,
-            backgroundColor: "rgb(255, 77, 77)",
+            backgroundColor: "rgb(255, 255, 255)",
           }}
         />
         <Container maxWidth="md" sx={{ position: "relative", py: 8 }}>

@@ -52,7 +52,7 @@ router.post('/', async (req, res) => {
       tasks.push(new CoupangScraper().searchProducts(query, limit));
     }
 
-    const results = await Promise.all(tasks);
+    const results = await Promise.all(tasks); //stalls here ----
     const products = results.flat();
 
     // Save to DB (ignoring duplicates)
