@@ -20,27 +20,30 @@ async function autoScroll(page) {
 }
 
 export default class DanggeunScraper {
-  constructor() {
+  /**
+* @param {import('puppeteer').Browser} browser  shared Puppeteer instance
+*/
+  constructor(browser) {
+    this.browser = browser;
     this.baseUrl = 'https://www.daangn.com';
     this.searchPath = '/kr/buy-sell/';
     this.region = process.env.DANGGEUN_REGION || '마장동-56';
   }
 
   async searchProducts(query, limit = 20) {
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+
     try {
-      const page = await browser.newPage();
+      const page = await this.browser.newPage();
       const url =
         `${this.baseUrl}${this.searchPath}` +
         `?in=${encodeURIComponent(this.region)}` +
-        `&only_on_sale=true&search=${encodeURIComponent(query)}`;
+        `&search=${encodeURIComponent(query)}`;
 
       console.log('Danggeun URL:', url);
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 10000 });
-      await page.waitForSelector('a[data-gtm="search_article"]', { timeout: 10000 });
+      // await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 });
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+
+      await page.waitForSelector('a[data-gtm="search_article"]', { timeout: 15000 });
 
       // scroll through the page to trigger lazy‐load
       await autoScroll(page);
@@ -78,13 +81,15 @@ export default class DanggeunScraper {
           });
         }
       });
+      await page.close();
 
       return products;
+
+
     } catch (err) {
       console.error('Danggeun scrape error:', err);
       return [];
     } finally {
-      await browser.close();
     }
   }
 }

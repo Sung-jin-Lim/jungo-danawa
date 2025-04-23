@@ -47,7 +47,12 @@ const SearchPage = () => {
   const [products, setProducts] = useState([]);
   const [activeTab, setActiveTab] = useState(0);
   const [priceRange, setPriceRange] = useState([0, 1000000]);
-  const [selectedSources, setSelectedSources] = useState(["danggeun", "coupang", "bunjang"]);
+  const [selectedSources, setSelectedSources] = useState([
+    "danggeun",
+    "coupang",
+    "bunjang",
+    "junggonara",
+  ]);
   const [sortBy, setSortBy] = useState("price_asc");
   const [selectedIds, setSelectedIds] = useState([]);
 
@@ -56,6 +61,7 @@ const SearchPage = () => {
     { label: "Danggeun", value: "danggeun" },
     { label: "Coupang", value: "coupang" },
     { label: "Bunjang", value: "bunjang" },
+    { label: "Junggonara", value: "junggonara" },
   ];
 
   // Format price
@@ -66,12 +72,14 @@ const SearchPage = () => {
 
   // Source labels + colors
   const getSourceName = (src) =>
-    ({ danggeun: "당근마켓", coupang: "쿠팡", bunjang: "번개장터" }[src] || src);
+    ({ danggeun: "당근마켓", coupang: "쿠팡", bunjang: "번개장터", junggonara: "중고나라" }[src] ||
+    src);
   const getSourceColor = (src) =>
     ({
       danggeun: theme.palette.warning.main,
       coupang: theme.palette.primary.main,
       bunjang: theme.palette.error.main,
+      junggonara: theme.palette.success.main,
     }[src] || theme.palette.primary.main);
 
   // Parse include/exclude tokens
@@ -206,6 +214,7 @@ const SearchPage = () => {
                 <MenuItem value="danggeun">당근마켓</MenuItem>
                 <MenuItem value="coupang">쿠팡</MenuItem>
                 <MenuItem value="bunjang">번개장터</MenuItem>
+                <MenuItem value="junggonara">중고나라</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -282,12 +291,7 @@ const SearchPage = () => {
                   <Button size="small" onClick={() => toggleSelect(p._id || p.productUrl)}>
                     {selectedIds.includes(p._id || p.productUrl) ? "Deselect" : "Select"}
                   </Button>
-                  <Button
-                    size="small"
-                    onClick={() =>
-                      navigate(`/product/${p.source}/${encodeURIComponent(p._id || p.productUrl)}`)
-                    }
-                  >
+                  <Button size="small" onClick={() => navigate(`/product/${p.source}/${p._id}`)}>
                     Details
                   </Button>
                 </CardActions>

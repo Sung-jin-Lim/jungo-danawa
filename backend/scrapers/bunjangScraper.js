@@ -20,7 +20,11 @@ async function autoScroll(page) {
 }
 
 export default class BunjangScraper {
-  constructor() {
+  /**
+* @param {import('puppeteer').Browser} browser  shared Puppeteer instance
+*/
+  constructor(browser) {
+    this.browser = browser;
     this.baseUrl = 'https://www.bunjang.co.kr';
     this.searchUrl = `${this.baseUrl}/search/products?q=`;
   }
@@ -30,13 +34,10 @@ export default class BunjangScraper {
    * @param {number} limit - Maximum number of products to return
    */
   async searchProducts(query, limit = 20) {
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+
 
     try {
-      const page = await browser.newPage();
+      const page = await this.browser.newPage();
       await page.setViewport({ width: 1280, height: 800 });
       await page.setUserAgent(
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) ' +
@@ -46,7 +47,9 @@ export default class BunjangScraper {
 
       const url = `${this.searchUrl}${encodeURIComponent(query)}`;
       console.log('Bunjang URL:', url);
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 20_000 });
+      // await page.goto(url, { waitUntil: 'networkidle2', timeout: 20_000 });
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+
       // wait for at least one product card
       await page.waitForSelector('a[data-pid]', { timeout: 20_000 });
 
@@ -91,13 +94,12 @@ export default class BunjangScraper {
           });
         }
       });
-
+      await page.close();
       return products;
     } catch (err) {
       console.error('Bunjang scrape error:', err);
       return [];
     } finally {
-      await browser.close();
     }
   }
 }
