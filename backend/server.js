@@ -11,6 +11,7 @@ dotenv.config();
 import comparisonRoutes from './api/routes/comparisonRoutes.js';
 import geminiRoutes from './api/routes/geminiRoutes.js';
 import searchRoutes from './api/routes/searchRoutes.js';
+import productRoutes from './api/routes/productRoutes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -25,6 +26,8 @@ app.use(express.json());
 app.use('/api/comparison', comparisonRoutes);
 app.use('/api/gemini', geminiRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/products', productRoutes);  // <-- new
+
 
 // Connect to MongoDB and start server
 mongoose.connect(MONGODB_URI)

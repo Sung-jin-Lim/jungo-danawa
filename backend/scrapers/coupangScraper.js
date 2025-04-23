@@ -12,7 +12,8 @@ export default class CoupangScraper {
   async searchProducts(query, limit = 20) {
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox',       // <— disable HTTP/2 support
+        '--disable-spdy',],
     });
 
 
@@ -23,8 +24,11 @@ export default class CoupangScraper {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36');
 
       const url = `${this.searchUrl}${encodeURIComponent(query)}`;
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 }); //stalls here
-      await page.waitForSelector('.search-product', { timeout: 15000 });
+      await page.setExtraHTTPHeaders({
+        Connection: 'close'
+      });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 10000 }); //stalls here
+      await page.waitForSelector('.search-product', { timeout: 10000 });
 
       // Scroll to bottom to trigger lazy-loading
       // await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight));

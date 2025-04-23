@@ -1,86 +1,74 @@
-const express = require('express');
+// File: backend/routes/products.js
+import express from 'express';
+import Product from '../../models/Product.js';
 const router = express.Router();
-const Product = require('../../models/Product');
-
-/**
- * @route   GET /api/products
- * @desc    Get all products with pagination and filtering
- * @access  Public
- */
-router.get('/', async (req, res) => {
-  try {
-    const {
-      page = 1,
-      limit = 20,
-      source,
-      minPrice,
-      maxPrice,
-      sortBy = 'timestamp',
-      sortOrder = 'desc',
-      category
-    } = req.query;
-
-    // Build filter object based on query parameters
-    const filter = {};
-    if (source) filter.source = source;
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = parseInt(minPrice, 10);
-      if (maxPrice) filter.price.$lte = parseInt(maxPrice, 10);
-    }
-    if (category) filter.category = category;
-
-    // Build sort object
-    const sort = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
-    // Calculate pagination
-    const pageNumber = parseInt(page, 10);
-    const limitNumber = parseInt(limit, 10);
-    const skip = (pageNumber - 1) * limitNumber;
-
-    // Execute query with filtering, sorting, and pagination
-    const products = await Product.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(limitNumber);
-
-    // Get total count for pagination
-    const total = await Product.countDocuments(filter);
-
-    res.json({
-      products,
-      pagination: {
-        total,
-        page: pageNumber,
-        limit: limitNumber,
-        pages: Math.ceil(total / limitNumber)
-      }
-    });
-  } catch (error) {
-    console.error('Get products error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
 
 /**
  * @route   GET /api/products/:id
- * @desc    Get a product by ID
+ * @desc    Get a product by ID + similar + market analysis
  * @access  Public
  */
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
-
+    const product = await Product.findById(req.params.id).lean();
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    res.json(product);
+    // 1) Similar products: same source, different ID, limit 3
+    const similarProducts = await Product.find({
+      source: product.source,
+      _id: { $ne: product._id }
+    })
+      .sort({ timestamp: -1 })
+      .limit(3)
+      .lean();
+
+    // 2) Market analysis: you can replace this stub with a real aggregation
+    //    e.g. average price across all sources, plus a few “market” listings.
+    const marketProducts = await Product.find({ /* your coupang filter */ })
+      .sort({ price: 1 })
+      .limit(2)
+      .lean();
+
+    const marketPrices = marketProducts.map((p) => p.price);
+    const marketPrice = marketPrices.length
+      ? Math.round(marketPrices.reduce((a, b) => a + b, 0) / marketPrices.length)
+      : product.price;
+
+    const disparity = product.price - marketPrice;
+    const disparityPercentage = marketPrice
+      ? (disparity / marketPrice) * 100
+      : 0;
+
+    const marketAnalysis = {
+      marketPrice,
+      disparity: Math.abs(disparity),
+      disparityPercentage: Math.abs(disparityPercentage),
+      marketProducts: marketProducts.map((p) => ({
+        id: p._id,
+        title: p.title,
+        price: p.price,
+        priceText: new Intl.NumberFormat('ko-KR', {
+          style: 'currency',
+          currency: 'KRW'
+        })
+          .format(p.price)
+          .replace('₩', '') + '원',
+        source: p.source,
+        imageUrl: p.imageUrl
+      }))
+    };
+
+    res.json({
+      product,
+      similarProducts,
+      marketAnalysis
+    });
   } catch (error) {
     console.error('Get product by ID error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-module.exports = router;
+export default router;

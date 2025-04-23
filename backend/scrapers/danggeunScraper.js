@@ -36,11 +36,11 @@ export default class DanggeunScraper {
       const url =
         `${this.baseUrl}${this.searchPath}` +
         `?in=${encodeURIComponent(this.region)}` +
-        `&search=${encodeURIComponent(query)}`;
+        `&only_on_sale=true&search=${encodeURIComponent(query)}`;
 
       console.log('Danggeun URL:', url);
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 20000 });
-      await page.waitForSelector('a[data-gtm="search_article"]', { timeout: 20000 });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 10000 });
+      await page.waitForSelector('a[data-gtm="search_article"]', { timeout: 10000 });
 
       // scroll through the page to trigger lazy‐load
       await autoScroll(page);

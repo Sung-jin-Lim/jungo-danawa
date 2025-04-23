@@ -1,4 +1,4 @@
-import { useState } from "react";
+// frontend/src/App.js
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
 import Header from "./components/Header";
@@ -10,12 +10,8 @@ import ComparisonPage from "./pages/ComparisonPage";
 
 const theme = createTheme({
   palette: {
-    primary: {
-      main: "#1976d2",
-    },
-    secondary: {
-      main: "#9c27b0",
-    },
+    primary: { main: "#1976d2" },
+    secondary: { main: "#9c27b0" },
   },
 });
 
@@ -29,6 +25,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
+            {/* assuming you only need the ID in the URL */}
             <Route path="/product/:id" element={<ProductDetailPage />} />
             <Route path="/compare" element={<ComparisonPage />} />
           </Routes>

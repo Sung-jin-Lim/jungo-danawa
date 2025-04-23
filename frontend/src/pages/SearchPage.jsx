@@ -1,4 +1,3 @@
-// File: frontend/src/pages/SearchPage.jsx
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { searchProducts } from "../services/api";
@@ -42,6 +41,7 @@ const SearchPage = () => {
 
   // State
   const [searchQuery, setSearchQuery] = useState(queryFromUrl);
+  const [keywordFilter, setKeywordFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
@@ -64,15 +64,20 @@ const SearchPage = () => {
       .format(value)
       .replace("₩", "") + "원";
 
-  // Source labels
+  // Source labels + colors
   const getSourceName = (src) =>
-    ({ danggeun: "당근마켓", coupang: "쿠팡", bunjang: "번게장터" }[src] || src);
+    ({ danggeun: "당근마켓", coupang: "쿠팡", bunjang: "번개장터" }[src] || src);
   const getSourceColor = (src) =>
     ({
       danggeun: theme.palette.warning.main,
       coupang: theme.palette.primary.main,
-      bunjang: theme.palette.success.main,
+      bunjang: theme.palette.error.main,
     }[src] || theme.palette.primary.main);
+
+  // Parse include/exclude tokens
+  const tokens = keywordFilter.split(/[,\s]+/).filter((t) => t);
+  const includeKeys = tokens.filter((t) => t.startsWith("+")).map((t) => t.slice(1));
+  const excludeKeys = tokens.filter((t) => t.startsWith("-")).map((t) => t.slice(1));
 
   // Perform search
   const doSearch = async () => {
@@ -103,7 +108,7 @@ const SearchPage = () => {
     }
   };
 
-  // Tab/filter handlers
+  // Handlers
   const handleTabChange = (_, v) => setActiveTab(v);
   const handlePriceChange = (_, val) => setPriceRange(val);
   const handleSourceChange = (e) => setSelectedSources(e.target.value);
@@ -116,18 +121,24 @@ const SearchPage = () => {
 
   // Filter & sort
   const filtered = products
+    // by tab
     .filter((p) => (activeTab === 0 ? true : p.source === tabs[activeTab].value))
+    // by source multiselect
     .filter((p) => selectedSources.includes(p.source))
-    .filter((p) => p.price >= priceRange[0] && p.price <= priceRange[1]);
+    // by price
+    .filter((p) => p.price >= priceRange[0] && p.price <= priceRange[1])
+    // include keywords
+    .filter((p) => includeKeys.every((k) => p.title.includes(k)))
+    // exclude keywords
+    .filter((p) => excludeKeys.every((k) => !p.title.includes(k)));
 
   const sorted = [...filtered].sort((a, b) =>
     sortBy === "price_asc" ? a.price - b.price : b.price - a.price
   );
 
-  // Initial search on mount
+  // Initial search
   useEffect(() => {
     if (queryFromUrl) doSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryFromUrl]);
 
   return (
@@ -178,7 +189,7 @@ const SearchPage = () => {
       {/* Filters & Tabs */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Tabs value={activeTab} onChange={handleTabChange} centered>
-          {tabs.map((t, i) => (
+          {tabs.map((t) => (
             <Tab key={t.label} label={t.label} />
           ))}
         </Tabs>
@@ -219,6 +230,18 @@ const SearchPage = () => {
               valueLabelFormat={formatPrice}
             />
           </Grid>
+
+          {/* Keyword Include/Exclude */}
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              label="Keyword Filters"
+              placeholder="+include, -exclude (comma separated)"
+              value={keywordFilter}
+              onChange={(e) => setKeywordFilter(e.target.value)}
+              helperText="Prefix with + to include, - to exclude"
+            />
+          </Grid>
         </Grid>
       </Paper>
 
@@ -249,11 +272,7 @@ const SearchPage = () => {
                     {p.title}
                   </Typography>
                   <Typography color="primary">
-                    {
-                      p.price != null
-                        ? formatPrice(p.price)
-                        : p.priceText /* fallback if parsing failed */
-                    }
+                    {p.price != null ? formatPrice(p.price) : p.priceText}
                   </Typography>
                 </CardContent>
                 <CardActions>
@@ -262,6 +281,14 @@ const SearchPage = () => {
                   </Button>
                   <Button size="small" onClick={() => toggleSelect(p._id || p.productUrl)}>
                     {selectedIds.includes(p._id || p.productUrl) ? "Deselect" : "Select"}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() =>
+                      navigate(`/product/${p.source}/${encodeURIComponent(p._id || p.productUrl)}`)
+                    }
+                  >
+                    Details
                   </Button>
                 </CardActions>
               </Card>
