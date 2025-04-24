@@ -94,7 +94,7 @@ const HomePage = () => {
             bottom: 0,
             right: 0,
             left: 0,
-            backgroundColor: "rgb(255, 255, 255)",
+            backgroundColor: theme.palette.primary.main,
           }}
         />
         <Container maxWidth="md" sx={{ position: "relative", py: 8 }}>
@@ -191,7 +191,11 @@ const HomePage = () => {
           </Typography>
           <Button
             variant="contained"
-            color="secondary"
+            sx={{
+              bgcolor: "#fff",
+              color: "#000",
+              "&:hover": { bgcolor: "#f5f5f5" },
+            }}
             size="large"
             onClick={() => navigate("/search")}
           >

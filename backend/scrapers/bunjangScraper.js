@@ -2,22 +2,22 @@ import puppeteer from 'puppeteer';
 import { load } from 'cheerio';
 
 // helper to scroll the page for lazy-loading
-async function autoScroll(page) {
-  await page.evaluate(async () => {
-    await new Promise((resolve) => {
-      let total = 0;
-      const distance = 100;
-      const timer = setInterval(() => {
-        window.scrollBy(0, distance);
-        total += distance;
-        if (total >= document.body.scrollHeight) {
-          clearInterval(timer);
-          resolve();
-        }
-      }, 100);
-    });
-  });
-}
+// async function autoScroll(page) {
+//   await page.evaluate(async () => {
+//     await new Promise((resolve) => {
+//       let total = 0;
+//       const distance = 100;
+//       const timer = setInterval(() => {
+//         window.scrollBy(0, distance);
+//         total += distance;
+//         if (total >= document.body.scrollHeight) {
+//           clearInterval(timer);
+//           resolve();
+//         }
+//       }, 100);
+//     });
+//   });
+// }
 
 export default class BunjangScraper {
   /**
@@ -29,10 +29,7 @@ export default class BunjangScraper {
     this.searchUrl = `${this.baseUrl}/search/products?q=`;
   }
 
-  /**
-   * @param {string} query - Search term
-   * @param {number} limit - Maximum number of products to return
-   */
+
   async searchProducts(query, limit = 20) {
 
 
@@ -54,7 +51,7 @@ export default class BunjangScraper {
       await page.waitForSelector('a[data-pid]', { timeout: 20_000 });
 
       // trigger lazy-loading
-      await autoScroll(page);
+      // await autoScroll(page);
       // pause to allow images to load
       await new Promise(resolve => setTimeout(resolve, 1_000));
       // grab HTML and parse with cheerio

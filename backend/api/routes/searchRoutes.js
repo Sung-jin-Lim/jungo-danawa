@@ -1,3 +1,4 @@
+// File: backend/api/routes/searchRoutes.js
 import express from 'express';
 import Product from '../../models/Product.js';
 
@@ -15,19 +16,17 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Search query is required' });
     }
 
-    // normalize sources
+    // Normalize sources into an array (default to all)
     let sources = req.body.sources;
     if (!Array.isArray(sources)) {
       if (typeof sources === 'string') {
-        sources = sources.includes(',')
-          ? sources.split(',').map(s => s.trim())
-          : [sources];
+        sources = sources.split(',').map(s => s.trim());
       } else {
         sources = ['danggeun', 'coupang', 'bunjang', 'junggonara'];
       }
     }
 
-    // import only the scrapers we need
+    // Dynamically import only the requested scrapers
     const [
       dangMod,
       coupMod,
@@ -45,10 +44,13 @@ router.post('/', async (req, res) => {
     const BunjangScraper = bunMod?.default;
     const JunggonaraScraper = jungMod?.default;
 
-    // grab our one-and-only browser instance
+    // Grab our shared Puppeteer Browser instance
     const browser = req.app.locals.browser;
+    if (!browser) {
+      return res.status(500).json({ message: 'Puppeteer browser not initialized' });
+    }
 
-    // spin up all pages in parallel
+    // Launch all scraper pages in parallel
     const tasks = [];
     if (DanggeunScraper) tasks.push(new DanggeunScraper(browser).searchProducts(query, limit));
     if (CoupangScraper) tasks.push(new CoupangScraper(browser).searchProducts(query, limit));
@@ -58,14 +60,20 @@ router.post('/', async (req, res) => {
     const results = await Promise.all(tasks);
     const products = results.flat();
 
-    // save them
+    // Bulk insert (ignore duplicates)
     await Product.insertMany(products, { ordered: false }).catch(() => { });
+
+    // Re-fetch the saved docs so each has a real _id
+    const savedDocs = await Product.find({
+      productUrl: { $in: products.map(p => p.productUrl) }
+    })
+      .lean();
 
     res.json({
       query,
       sources: sources.filter(s => ['danggeun', 'coupang', 'bunjang', 'junggonara'].includes(s)),
-      count: products.length,
-      products
+      count: savedDocs.length,
+      products: savedDocs
     });
   } catch (err) {
     console.error('Search error:', err);

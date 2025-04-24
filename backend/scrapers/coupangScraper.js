@@ -4,8 +4,8 @@ import { load } from 'cheerio';
 
 export default class CoupangScraper {
   /**
-  * @param {import('puppeteer').Browser} browser  shared Puppeteer instance
-  */
+   * @param {import('puppeteer').Browser} browser  shared Puppeteer instance
+   */
   constructor(browser) {
     this.browser = browser;
     this.baseUrl = 'https://www.coupang.com';
@@ -14,11 +14,15 @@ export default class CoupangScraper {
 
 
   async searchProducts(query, limit = 20) {
-
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox',       // <— disable HTTP/2 support
+        '--disable-spdy',],
+    });
 
 
     try {
-      const page = await this.browser.newPage();
+      const page = await browser.newPage();
       await page.setViewport({ width: 1280, height: 800 });
       await page.setUserAgent(
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36');
@@ -27,15 +31,13 @@ export default class CoupangScraper {
       await page.setExtraHTTPHeaders({
         Connection: 'close'
       });
-      // await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 }); //stalls here
-      await page.goto(url, { waitUntil: 'domcontentloaded' });
-
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 15000 }); //stalls here coupang needs this to load
       await page.waitForSelector('.search-product', { timeout: 15000 });
 
-      // Scroll to bottom to trigger lazy-loading
-      // await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight));
+      // Scroll to bottom to trigger lazy - loading
+      await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight));
       // Pause briefly to allow images to load
-      // await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const html = await page.content();
       const $ = load(html);
@@ -71,6 +73,7 @@ export default class CoupangScraper {
           });
         }
       });
+      await page.close();
 
       return products;
     } catch (err) {

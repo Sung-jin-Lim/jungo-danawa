@@ -291,7 +291,7 @@ const SearchPage = () => {
                   <Button size="small" onClick={() => toggleSelect(p._id || p.productUrl)}>
                     {selectedIds.includes(p._id || p.productUrl) ? "Deselect" : "Select"}
                   </Button>
-                  <Button size="small" onClick={() => navigate(`/product/${p.source}/${p._id}`)}>
+                  <Button size="small" onClick={() => navigate(`/product/${p._id}`)}>
                     Details
                   </Button>
                 </CardActions>

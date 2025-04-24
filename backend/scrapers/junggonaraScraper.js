@@ -4,12 +4,11 @@ import { load } from "cheerio";
 
 async function autoScroll(page) {
   await page.evaluate(async () => {
-    await new Promise((resolve) => {
-      let total = 0;
-      const distance = 100;
+    await new Promise(resolve => {
+      let total = 0, dist = 100;
       const timer = setInterval(() => {
-        window.scrollBy(0, distance);
-        total += distance;
+        window.scrollBy(0, dist);
+        total += dist;
         if (total >= document.body.scrollHeight) {
           clearInterval(timer);
           resolve();
@@ -25,21 +24,21 @@ export default class JunggonaraScraper {
    */
   constructor(browser) {
     this.browser = browser;
-    this.baseUrl = "https://web.joongna.com";
-    this.searchPath = "/search/?component=&q=";
+    this.baseUrl = 'https://web.joongna.com';
+    this.searchPath = '/search/';
   }
 
   async searchProducts(query, limit = 20) {
+    const page = await this.browser.newPage();
 
 
     try {
       // open a fresh page from the shared browser
-      const page = await this.browser.newPage();
       const url = `${this.baseUrl}${this.searchPath}${encodeURIComponent(query)}`;
       console.log("Junggonara URL:", url);
 
-      // await page.goto(url, { waitUntil: "networkidle2", timeout: 15000 });
-      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      await page.goto(url, { waitUntil: "networkidle2", timeout: 15000 });
+      // await page.goto(url, { waitUntil: 'domcontentloaded' });
 
       await page.waitForSelector("ul.search-results", { timeout: 15000 });
 

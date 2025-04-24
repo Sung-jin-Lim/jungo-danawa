@@ -30,8 +30,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 
 const ProductDetailPage = () => {
-  const { source, id: rawId } = useParams();
-  const id = decodeURIComponent(rawId);
+  const { id } = useParams();
   const navigate = useNavigate();
   const theme = useTheme();
 
@@ -60,10 +59,10 @@ const ProductDetailPage = () => {
   };
 
   useEffect(() => {
-    if (source && id) {
-      fetchProductDetails(source, id);
+    if (id) {
+      fetchProductDetails(id);
     }
-  }, [source, id]);
+  }, [id]);
 
   const formatPrice = (price) =>
     new Intl.NumberFormat("ko-KR", {
@@ -384,7 +383,7 @@ const ProductDetailPage = () => {
                       boxShadow: 6,
                     },
                   }}
-                  onClick={() => navigate(`/product/${sp.source}/${sp.id}`)}
+                  onClick={() => navigate(`/product/${sp.id}`)}
                 >
                   <CardMedia component="img" height="140" image={sp.imageUrl} alt={sp.title} />
                   <CardContent sx={{ flexGrow: 1 }}>
