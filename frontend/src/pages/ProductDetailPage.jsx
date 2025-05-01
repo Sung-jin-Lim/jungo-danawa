@@ -22,7 +22,6 @@ import {
   TableHead,
   TableRow,
   useTheme,
-  Link,
 } from "@mui/material";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
@@ -48,15 +47,6 @@ const ProductDetailPage = () => {
       const response = await fetch(`/api/products/${productId}`);
       if (!response.ok) throw new Error("Not found");
       const { product, similarProducts, marketAnalysis } = await response.json();
-
-      // Ensure product has an images array, even if it only contains the imageUrl
-      if (product && !product.images) {
-        product.images = product.imageUrl ? [product.imageUrl] : [];
-      } else if (product && product.images && product.images.length === 0 && product.imageUrl) {
-        // If images array exists but is empty, and imageUrl exists, use imageUrl
-        product.images = [product.imageUrl];
-      }
-
       setProduct(product);
       setSimilarProducts(similarProducts);
       setMarketAnalysis(marketAnalysis);
@@ -152,41 +142,30 @@ const ProductDetailPage = () => {
         {/* Images */}
         <Grid item xs={12} md={6}>
           <Card>
-            <CardMedia
-              component="img"
-              height="400"
-              image={
-                product.images && product.images.length > 0
-                  ? product.images[0]
-                  : product.imageUrl || "/placeholder.png"
-              }
-              alt={product.title}
-            />
-            {product.images && product.images.length > 0 && (
-              <Box sx={{ display: "flex", p: 1, overflowX: "auto" }}>
-                {product.images.map((img, i) => (
-                  <Box
-                    key={i}
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      flexShrink: 0,
-                      mr: 1,
-                      border: 2,
-                      borderColor: i === 0 ? "primary.main" : "transparent",
-                      borderRadius: 1,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <img
-                      src={img}
-                      alt={`${product.title} ${i + 1}`}
-                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                    />
-                  </Box>
-                ))}
-              </Box>
-            )}
+            <CardMedia component="img" height="400" image={product.images[0]} alt={product.title} />
+            <Box sx={{ display: "flex", p: 1, overflowX: "auto" }}>
+              {product.images.map((img, i) => (
+                <Box
+                  key={i}
+                  sx={{
+                    width: 80,
+                    height: 80,
+                    flexShrink: 0,
+                    mr: 1,
+                    border: 2,
+                    borderColor: i === 0 ? "primary.main" : "transparent",
+                    borderRadius: 1,
+                    overflow: "hidden",
+                  }}
+                >
+                  <img
+                    src={img}
+                    alt={`${product.title} ${i + 1}`}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </Box>
+              ))}
+            </Box>
           </Card>
         </Grid>
 
@@ -216,30 +195,18 @@ const ProductDetailPage = () => {
                   sx={{
                     p: 2,
                     mb: 3,
-                    bgcolor: marketAnalysis.isLowerThanMarket
-                      ? theme.palette.success.light
-                      : theme.palette.info.light,
-                    color: marketAnalysis.isLowerThanMarket
-                      ? theme.palette.success.contrastText
-                      : theme.palette.info.contrastText,
+                    bgcolor: theme.palette.success.light,
+                    color: theme.palette.success.contrastText,
                     borderRadius: 2,
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ display: "flex", alignItems: "center" }}>
                     <CompareArrowsIcon sx={{ mr: 1 }} />
-                    {marketAnalysis.isLowerThanMarket
-                      ? `시장가 대비 ${Math.abs(marketAnalysis.disparityPercentage).toFixed(
-                          1
-                        )}% 저렴`
-                      : `시장가 대비 ${Math.abs(marketAnalysis.disparityPercentage).toFixed(
-                          1
-                        )}% 비싸요`}
+                    시장가 대비 {marketAnalysis.disparityPercentage.toFixed(1)}% 저렴
                   </Typography>
                   <Typography variant="body2">
-                    시장가: {formatPrice(marketAnalysis.marketPrice)} |
-                    {marketAnalysis.isLowerThanMarket
-                      ? `절약: ${formatPrice(marketAnalysis.disparity)}`
-                      : `차이: ${formatPrice(marketAnalysis.disparity)}`}
+                    시장가: {formatPrice(marketAnalysis.marketPrice)} | 절약:{" "}
+                    {formatPrice(marketAnalysis.disparity)}
                   </Typography>
                 </Paper>
               )}
@@ -296,7 +263,7 @@ const ProductDetailPage = () => {
                   size="large"
                   fullWidth
                   startIcon={<CompareArrowsIcon />}
-                  onClick={() => navigate(`/compare?ids=${product._id}`)}
+                  onClick={() => navigate(`/compare?ids=${source}-${id}`)}
                 >
                   다른 제품과 비교하기
                 </Button>
@@ -344,71 +311,53 @@ const ProductDetailPage = () => {
               시장가 비교
             </Typography>
             <Typography variant="body2" color="text.secondary" paragraph>
-              {product.source === "coupang"
-                ? "유사한 제품과의 가격 비교"
-                : "쿠팡에서 판매 중인 동일/유사 제품과의 가격 비교"}
+              쿠팡에서 판매 중인 동일/유사 제품과의 가격 비교
             </Typography>
-            {marketAnalysis.marketProducts.length === 0 ? (
-              <Alert severity="info">유사한 제품을 찾을 수 없습니다.</Alert>
-            ) : (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>제품명</TableCell>
-                      <TableCell align="right">가격</TableCell>
-                      <TableCell align="right">차이</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {marketAnalysis.marketProducts.map((m) => {
-                      const diff = m.price - product.price;
-                      const pct = (diff / m.price) * 100;
-                      const isNegative = diff < 0;
-                      return (
-                        <TableRow key={m._id || `market-${m.title.substring(0, 10)}`}>
-                          <TableCell>
-                            <Box sx={{ display: "flex", alignItems: "center" }}>
-                              <Chip
-                                label={getSourceName(m.source)}
-                                size="small"
-                                sx={{
-                                  mr: 1,
-                                  bgcolor: getSourceColor(m.source),
-                                  color: "#fff",
-                                }}
-                              />
-                              <Link
-                                href={m.productUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                underline="hover"
-                                color="inherit"
-                              >
-                                {m.title}
-                              </Link>
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right">{m.priceText}</TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{
-                              color: isNegative
-                                ? theme.palette.error.main
-                                : theme.palette.success.main,
-                              fontWeight: "bold",
-                            }}
-                          >
-                            {formatPrice(Math.abs(diff))} ({Math.abs(pct).toFixed(1)}%)
-                            {isNegative ? " 더 비쌈" : " 더 저렴함"}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            )}
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>제품명</TableCell>
+                    <TableCell align="right">가격</TableCell>
+                    <TableCell align="right">차이</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {marketAnalysis.marketProducts.map((m) => {
+                    const diff = m.price - product.price;
+                    const pct = (diff / m.price) * 100;
+                    return (
+                      <TableRow key={m.id}>
+                        <TableCell>
+                          <Box sx={{ display: "flex", alignItems: "center" }}>
+                            <Chip
+                              label={getSourceName(m.source)}
+                              size="small"
+                              sx={{
+                                mr: 1,
+                                bgcolor: getSourceColor(m.source),
+                                color: "#fff",
+                              }}
+                            />
+                            {m.title}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">{m.priceText}</TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            color: theme.palette.success.main,
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {formatPrice(diff)} ({pct.toFixed(1)}%)
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
           </CardContent>
         </Card>
       )}
@@ -421,7 +370,7 @@ const ProductDetailPage = () => {
           </Typography>
           <Grid container spacing={3}>
             {similarProducts.map((sp) => (
-              <Grid item xs={12} sm={6} md={4} key={sp._id}>
+              <Grid item xs={12} sm={6} md={4} key={sp.id}>
                 <Card
                   sx={{
                     height: "100%",
@@ -434,7 +383,7 @@ const ProductDetailPage = () => {
                       boxShadow: 6,
                     },
                   }}
-                  onClick={() => navigate(`/product/${sp._id}`)}
+                  onClick={() => navigate(`/product/${sp.id}`)}
                 >
                   <CardMedia component="img" height="140" image={sp.imageUrl} alt={sp.title} />
                   <CardContent sx={{ flexGrow: 1 }}>

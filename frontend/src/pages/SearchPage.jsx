@@ -98,11 +98,11 @@ const SearchPage = () => {
         priceRange[0],
         priceRange[1]
       );
-      setProducts(items || []);
+      setProducts(items);
       setSelectedIds([]);
     } catch (e) {
       console.error(e);
-      setError("Failed to fetch products. " + e.message);
+      setError("Failed to fetch products.");
     } finally {
       setLoading(false);
     }
@@ -148,79 +148,6 @@ const SearchPage = () => {
   useEffect(() => {
     if (queryFromUrl) doSearch();
   }, [queryFromUrl]);
-
-  // Render product cards and handle the empty state
-  const renderProducts = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center my-12">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="text-center my-12 text-red-500 p-4 border border-red-300 rounded-md bg-red-50">
-          <h3 className="text-lg font-semibold">An error occurred:</h3>
-          <p>{error}</p>
-          <button
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-700 transition-colors"
-            onClick={doSearch}
-          >
-            Retry Search
-          </button>
-        </div>
-      );
-    }
-
-    if (!products || products.length === 0) {
-      return (
-        <div className="text-center my-12 p-6 border border-gray-300 rounded-md bg-gray-50">
-          <svg
-            className="w-16 h-16 mx-auto text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <h3 className="mt-4 text-xl font-semibold text-gray-700">No results found</h3>
-          <p className="mt-2 text-gray-600">
-            We couldn't find any products matching "{searchQuery}" in the selected marketplaces.
-          </p>
-          <div className="mt-4">
-            <p className="text-gray-600 text-sm">Suggestions:</p>
-            <ul className="mt-2 text-sm text-gray-600 list-disc list-inside">
-              <li>Check if you've selected the right marketplaces</li>
-              <li>Try more general search terms</li>
-              <li>Check for typos in your search</li>
-              <li>Try searching in Korean for better results</li>
-            </ul>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product) => (
-          <ProductCard
-            key={`${product.marketplace}-${product.id}`}
-            product={product}
-            isSelected={selectedIds.includes(`${product.marketplace}-${product.id}`)}
-            onSelect={() => handleProductSelect(product)}
-          />
-        ))}
-      </div>
-    );
-  };
 
   return (
     <Container sx={{ py: 4 }}>
@@ -328,7 +255,51 @@ const SearchPage = () => {
       </Paper>
 
       {/* Results */}
-      {renderProducts()}
+      {loading ? (
+        <Box textAlign="center">
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error">{error}</Alert>
+      ) : (
+        <Grid container spacing={3}>
+          {sorted.map((p) => (
+            <Grid item xs={12} sm={6} md={4} key={p._id || p.productUrl}>
+              <Card>
+                <CardMedia component="img" height="200" image={p.imageUrl} alt={p.title} />
+                <CardContent>
+                  <Chip
+                    label={getSourceName(p.source)}
+                    size="small"
+                    sx={{
+                      backgroundColor: getSourceColor(p.source),
+                      color: "#fff",
+                      mb: 1,
+                    }}
+                  />
+                  <Typography variant="h6" gutterBottom>
+                    {p.title}
+                  </Typography>
+                  <Typography color="primary">
+                    {p.price != null ? formatPrice(p.price) : p.priceText}
+                  </Typography>
+                </CardContent>
+                <CardActions>
+                  <Button size="small" onClick={() => window.open(p.productUrl)}>
+                    View
+                  </Button>
+                  <Button size="small" onClick={() => toggleSelect(p._id || p.productUrl)}>
+                    {selectedIds.includes(p._id || p.productUrl) ? "Deselect" : "Select"}
+                  </Button>
+                  <Button size="small" onClick={() => navigate(`/product/${p._id}`)}>
+                    Details
+                  </Button>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
     </Container>
   );
 };

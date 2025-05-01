@@ -1,8 +1,6 @@
 // File: backend/routes/products.js
 import express from 'express';
 import Product from '../../models/Product.js';
-import marketAnalysisService from '../../services/marketAnalysisService.js';
-
 const router = express.Router();
 
 /**
@@ -26,8 +24,41 @@ router.get('/:id', async (req, res) => {
       .limit(3)
       .lean();
 
-    // 2) Market analysis: get detailed market comparison using our service
-    const marketAnalysis = await marketAnalysisService.getMarketAnalysis(product);
+    // 2) Market analysis: you can replace this stub with a real aggregation
+    //    e.g. average price across all sources, plus a few “market” listings.
+    const marketProducts = await Product.find({ /* your coupang filter */ })
+      .sort({ price: 1 })
+      .limit(2)
+      .lean();
+
+    const marketPrices = marketProducts.map((p) => p.price);
+    const marketPrice = marketPrices.length
+      ? Math.round(marketPrices.reduce((a, b) => a + b, 0) / marketPrices.length)
+      : product.price;
+
+    const disparity = product.price - marketPrice;
+    const disparityPercentage = marketPrice
+      ? (disparity / marketPrice) * 100
+      : 0;
+
+    const marketAnalysis = {
+      marketPrice,
+      disparity: Math.abs(disparity),
+      disparityPercentage: Math.abs(disparityPercentage),
+      marketProducts: marketProducts.map((p) => ({
+        id: p._id,
+        title: p.title,
+        price: p.price,
+        priceText: new Intl.NumberFormat('ko-KR', {
+          style: 'currency',
+          currency: 'KRW'
+        })
+          .format(p.price)
+          .replace('₩', '') + '원',
+        source: p.source,
+        imageUrl: p.imageUrl
+      }))
+    };
 
     res.json({
       product,

@@ -9,33 +9,21 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * Search for products across platforms
- * @param {string} query - Search query string
- * @param {Array<string>} sources - List of marketplaces to search ['danggeun', 'coupang', 'bunjang', 'junggonara']
- * @param {number} minPrice - Minimum price filter
- * @param {number} maxPrice - Maximum price filter
- * @param {number} limit - Maximum number of results per marketplace
- * @returns {Promise<Object>} Search results with products array
+ * @param {string} query
+ * @param {number} [limit=3]
+ * @param {Array<string>} [sources=['danggeun','coupang']]
  */
 export async function searchProducts(
   query,
-  sources = ['danggeun', 'coupang', 'bunjang', 'junggonara'],
-  minPrice = 0,
-  maxPrice = 1000000,
-  limit = 20
+  limit = 3,
+  sources = ['danggeun', 'coupang']
 ) {
   const response = await fetch(`${API_BASE_URL}/search`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      query,
-      sources,
-      limit,
-      filters: {
-        price: { min: minPrice, max: maxPrice }
-      }
-    }),
+    body: JSON.stringify({ query, sources, limit }),
   });
 
   if (!response.ok) {
