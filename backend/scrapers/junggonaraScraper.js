@@ -3,6 +3,7 @@ import puppeteer from "puppeteer";
 import { load } from "cheerio";
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 async function autoScroll(page) {
   await page.evaluate(async () => {
@@ -26,6 +27,9 @@ export default class JunggonaraScraper {
    * @param {Object} options Additional options
    * @param {boolean} options.debug Enable debug mode with screenshots
    * @param {string} options.debugDir Directory to save debug files
+   * @param {boolean} options.useCache Enable caching of search results
+   * @param {string} options.cacheDir Directory to save cache files
+   * @param {number} options.cacheTTL Time to live for cache in ms (default: 1 hour)
    */
   constructor(browser, options = {}) {
     this.browser = browser;
@@ -34,9 +38,82 @@ export default class JunggonaraScraper {
     this.debug = options.debug || false;
     this.debugDir = options.debugDir || path.join(process.cwd(), 'debug');
 
+    // Cache settings
+    this.useCache = options.useCache !== false; // Enable by default
+    this.cacheDir = options.cacheDir || path.join(process.cwd(), 'cache');
+    this.cacheTTL = options.cacheTTL || 60 * 60 * 1000; // 1 hour default
+
     // Create debug directory if it doesn't exist and debug is enabled
     if (this.debug && !fs.existsSync(this.debugDir)) {
       fs.mkdirSync(this.debugDir, { recursive: true });
+    }
+
+    // Create cache directory if it doesn't exist and cache is enabled
+    if (this.useCache && !fs.existsSync(this.cacheDir)) {
+      fs.mkdirSync(this.cacheDir, { recursive: true });
+    }
+  }
+
+  /**
+   * Generate a cache key for a given query
+   * @param {string} query Search query
+   * @param {number} limit Result limit
+   * @returns {string} Cache key
+   */
+  getCacheKey(query, limit) {
+    const data = `junggonara:${query}:${limit}`;
+    return crypto.createHash('md5').update(data).digest('hex');
+  }
+
+  /**
+   * Try to get results from cache
+   * @param {string} cacheKey Cache key
+   * @returns {Array|null} Cached results or null if not found/expired
+   */
+  getFromCache(cacheKey) {
+    if (!this.useCache) return null;
+
+    const cacheFile = path.join(this.cacheDir, `${cacheKey}.json`);
+
+    try {
+      if (!fs.existsSync(cacheFile)) return null;
+
+      const cacheData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+      const now = Date.now();
+
+      // Check if cache is expired
+      if (now - cacheData.timestamp > this.cacheTTL) {
+        console.log('Cache expired for', cacheKey);
+        return null;
+      }
+
+      console.log('Using cached results for', cacheKey);
+      return cacheData.data;
+    } catch (err) {
+      console.error('Error reading cache:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Save results to cache
+   * @param {string} cacheKey Cache key
+   * @param {Array} data Data to cache
+   */
+  saveToCache(cacheKey, data) {
+    if (!this.useCache) return;
+
+    const cacheFile = path.join(this.cacheDir, `${cacheKey}.json`);
+    const cacheData = {
+      timestamp: Date.now(),
+      data: data
+    };
+
+    try {
+      fs.writeFileSync(cacheFile, JSON.stringify(cacheData), 'utf8');
+      console.log('Saved results to cache:', cacheKey);
+    } catch (err) {
+      console.error('Error writing cache:', err);
     }
   }
 
@@ -67,7 +144,25 @@ export default class JunggonaraScraper {
     console.log(`Debug info saved for step: ${step}`);
   }
 
-  async searchProducts(query, limit = 20) {
+  /**
+   * Search for products with caching support
+   * @param {string} query Search query
+   * @param {number} limit Max results to return
+   * @param {boolean} forceRefresh Force refresh cache
+   * @returns {Array} Search results
+   */
+  async searchProducts(query, limit = 20, forceRefresh = false) {
+    // Generate cache key
+    const cacheKey = this.getCacheKey(query, limit);
+
+    // Try to get from cache first if not forcing refresh
+    if (!forceRefresh) {
+      const cachedResults = this.getFromCache(cacheKey);
+      if (cachedResults) {
+        return cachedResults;
+      }
+    }
+
     const page = await this.browser.newPage();
 
     // Set longer default timeout
@@ -185,6 +280,9 @@ export default class JunggonaraScraper {
         );
       }
 
+      // Cache the successful results
+      this.saveToCache(cacheKey, products);
+
       return products;
     } catch (err) {
       console.error("Junggonara scrape error:", err);
@@ -211,6 +309,44 @@ export default class JunggonaraScraper {
       } catch (closeErr) {
         console.error("Error closing Junggonara page:", closeErr);
       }
+    }
+  }
+
+  /**
+   * Clear the entire cache
+   */
+  clearCache() {
+    if (!this.useCache) return;
+
+    try {
+      const files = fs.readdirSync(this.cacheDir);
+      files.forEach(file => {
+        if (file.endsWith('.json')) {
+          fs.unlinkSync(path.join(this.cacheDir, file));
+        }
+      });
+      console.log('Cache cleared');
+    } catch (err) {
+      console.error('Error clearing cache:', err);
+    }
+  }
+
+  /**
+   * Remove specific cache entry
+   * @param {string} query Search query to remove from cache
+   * @param {number} limit Limit value used in the original search
+   */
+  removeCacheEntry(query, limit = 20) {
+    const cacheKey = this.getCacheKey(query, limit);
+    const cacheFile = path.join(this.cacheDir, `${cacheKey}.json`);
+
+    try {
+      if (fs.existsSync(cacheFile)) {
+        fs.unlinkSync(cacheFile);
+        console.log(`Cache entry removed: ${query}`);
+      }
+    } catch (err) {
+      console.error('Error removing cache entry:', err);
     }
   }
 }

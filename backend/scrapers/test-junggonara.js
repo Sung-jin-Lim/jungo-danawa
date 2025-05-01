@@ -25,16 +25,22 @@ async function testJunggonaraScraper() {
     // Initialize the scraper with debug mode enabled
     const scraper = new JunggonaraScraper(browser, {
       debug: true,
-      debugDir: './debug/junggonara'
+      debugDir: './debug/junggonara',
+      useCache: true,
+      cacheDir: './cache/junggonara',
+      cacheTTL: 30 * 60 * 1000, // 30 minutes cache
     });
 
     // Test with a common search term
     const query = 'galaxy';
     console.log(`Searching for "${query}"...`);
 
+    // First search - should scrape the website
+    console.time('First search (no cache)');
     const results = await scraper.searchProducts(query, 10);
+    console.timeEnd('First search (no cache)');
 
-    console.log(`Found ${results.length} products`);
+    console.log(`Found ${results.length} products in first search`);
 
     // Print the first 3 results
     if (results.length > 0) {
@@ -51,6 +57,37 @@ async function testJunggonaraScraper() {
     } else {
       console.log('No products found. Check debug files for details.');
     }
+
+    // Second search - should use the cache
+    console.log('\n--- Second search (should use cache) ---');
+    console.time('Second search (with cache)');
+    const cachedResults = await scraper.searchProducts(query, 10);
+    console.timeEnd('Second search (with cache)');
+
+    console.log(`Found ${cachedResults.length} products in cached search`);
+
+    // Test with force refresh
+    console.log('\n--- Third search (force refresh, bypass cache) ---');
+    console.time('Third search (force refresh)');
+    const refreshedResults = await scraper.searchProducts(query, 10, true);
+    console.timeEnd('Third search (force refresh)');
+
+    console.log(`Found ${refreshedResults.length} products in forced refresh search`);
+
+    // Test cache management methods
+    console.log('\n--- Cache management test ---');
+    // Remove specific cache entry
+    scraper.removeCacheEntry(query, 10);
+
+    // Test after removing specific entry
+    console.log('\n--- Fourth search (after removing cache entry) ---');
+    console.time('Fourth search (after cache removal)');
+    await scraper.searchProducts(query, 10);
+    console.timeEnd('Fourth search (after cache removal)');
+
+    // Test clear all cache
+    console.log('\n--- Clearing all cache ---');
+    scraper.clearCache();
 
   } catch (error) {
     console.error('Test failed with error:', error);

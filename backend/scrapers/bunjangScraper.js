@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import { load } from 'cheerio';
+import CacheManager from './cacheManager.js';
 
 // helper to scroll the page for lazy-loading
 // async function autoScroll(page) {
@@ -21,17 +22,44 @@ import { load } from 'cheerio';
 
 export default class BunjangScraper {
   /**
-* @param {import('puppeteer').Browser} browser  shared Puppeteer instance
-*/
-  constructor(browser) {
+   * @param {import('puppeteer').Browser} browser  shared Puppeteer instance
+   * @param {Object} options Cache and other options
+   * @param {boolean} options.useCache Enable caching of search results
+   * @param {string} options.cacheDir Directory to save cache files
+   * @param {number} options.cacheTTL Time to live for cache in ms (default: 1 hour)
+   */
+  constructor(browser, options = {}) {
     this.browser = browser;
     this.baseUrl = 'https://www.bunjang.co.kr';
     this.searchUrl = `${this.baseUrl}/search/products?q=`;
+
+    // Initialize cache manager
+    this.cache = new CacheManager({
+      cacheDir: options.cacheDir || './cache/bunjang',
+      defaultTTL: options.cacheTTL || 60 * 60 * 1000, // 1 hour
+      enabled: options.useCache !== false // enabled by default
+    });
   }
 
+  /**
+   * Search for products on Bunjang
+   * @param {string} query Search query
+   * @param {number} limit Max results
+   * @param {boolean} forceRefresh Force refresh cache
+   * @returns {Array} Products
+   */
+  async searchProducts(query, limit = 20, forceRefresh = false) {
+    // Generate cache key
+    const cacheKey = this.cache.generateKey('bunjang', 'search', { query, limit });
 
-  async searchProducts(query, limit = 20) {
-
+    // Try to get from cache first if not forcing refresh
+    if (!forceRefresh) {
+      const cachedResults = this.cache.get(cacheKey);
+      if (cachedResults) {
+        console.log(`Using cached results for Bunjang search: ${query}`);
+        return cachedResults;
+      }
+    }
 
     try {
       const page = await this.browser.newPage();
@@ -91,6 +119,13 @@ export default class BunjangScraper {
           });
         }
       });
+
+      // Cache successful results
+      if (products.length > 0) {
+        this.cache.set(cacheKey, products);
+        console.log(`Cached ${products.length} Bunjang results for: ${query}`);
+      }
+
       await page.close();
       return products;
     } catch (err) {
@@ -98,5 +133,31 @@ export default class BunjangScraper {
       return [];
     } finally {
     }
+  }
+
+  /**
+   * Clear the entire cache
+   * @returns {number} Number of entries cleared
+   */
+  clearCache() {
+    return this.cache.clear();
+  }
+
+  /**
+   * Remove specific cache entry
+   * @param {string} query Search query to remove from cache
+   * @param {number} limit Limit value used in the original search
+   */
+  removeCacheEntry(query, limit = 20) {
+    const cacheKey = this.cache.generateKey('bunjang', 'search', { query, limit });
+    return this.cache.delete(cacheKey);
+  }
+
+  /**
+   * Get cache statistics
+   * @returns {Object} Cache stats
+   */
+  getCacheStats() {
+    return this.cache.getStats();
   }
 }

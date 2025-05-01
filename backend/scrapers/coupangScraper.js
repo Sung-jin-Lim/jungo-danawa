@@ -1,19 +1,49 @@
 // File: backend/scrapers/coupangScraper.js
 import puppeteer from 'puppeteer';
 import { load } from 'cheerio';
+import CacheManager from './cacheManager.js';
 
 export default class CoupangScraper {
   /**
    * @param {import('puppeteer').Browser} browser  shared Puppeteer instance
+   * @param {Object} options Cache and other options
+   * @param {boolean} options.useCache Enable caching of search results
+   * @param {string} options.cacheDir Directory to save cache files
+   * @param {number} options.cacheTTL Time to live for cache in ms (default: 1 hour)
    */
-  constructor(browser) {
+  constructor(browser, options = {}) {
     this.browser = browser;
     this.baseUrl = 'https://www.coupang.com';
     this.searchUrl = 'https://www.coupang.com/np/search?component=&q=';
+
+    // Initialize cache manager
+    this.cache = new CacheManager({
+      cacheDir: options.cacheDir || './cache/coupang',
+      defaultTTL: options.cacheTTL || 60 * 60 * 1000, // 1 hour
+      enabled: options.useCache !== false // enabled by default
+    });
   }
 
+  /**
+   * Search for products on Coupang
+   * @param {string} query Search query
+   * @param {number} limit Max results
+   * @param {boolean} forceRefresh Force refresh cache
+   * @returns {Array} Products
+   */
+  async searchProducts(query, limit = 20, forceRefresh = false) {
+    // Generate cache key
+    const cacheKey = this.cache.generateKey('coupang', 'search', { query, limit });
 
-  async searchProducts(query, limit = 20) {
+    // Try to get from cache first if not forcing refresh
+    if (!forceRefresh) {
+      const cachedResults = this.cache.get(cacheKey);
+      if (cachedResults) {
+        console.log(`Using cached results for Coupang search: ${query}`);
+        return cachedResults;
+      }
+    }
+
     const browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox',       // <— disable HTTP/2 support
@@ -73,6 +103,13 @@ export default class CoupangScraper {
           });
         }
       });
+
+      // Cache successful results
+      if (products.length > 0) {
+        this.cache.set(cacheKey, products);
+        console.log(`Cached ${products.length} Coupang results for: ${query}`);
+      }
+
       await page.close();
 
       return products;
@@ -81,5 +118,21 @@ export default class CoupangScraper {
       return [];
     } finally {
     }
+  }
+
+  /**
+   * Clear the entire cache
+   * @returns {number} Number of entries cleared
+   */
+  clearCache() {
+    return this.cache.clear();
+  }
+
+  /**
+   * Get cache statistics
+   * @returns {Object} Cache stats
+   */
+  getCacheStats() {
+    return this.cache.getStats();
   }
 }

@@ -1,6 +1,7 @@
 // File: backend/scrapers/danggeunScraper.js
 import puppeteer from 'puppeteer';
 import { load } from 'cheerio';
+import CacheManager from './cacheManager.js';
 
 async function autoScroll(page) {
   await page.evaluate(async () => {
@@ -20,17 +21,45 @@ async function autoScroll(page) {
 }
 
 export default class DanggeunScraper {
-  constructor(browser) {
+  /**
+   * @param {import('puppeteer').Browser} browser shared Puppeteer instance
+   * @param {Object} options Cache and other options
+   * @param {boolean} options.useCache Enable caching of search results
+   * @param {string} options.cacheDir Directory to save cache files
+   * @param {number} options.cacheTTL Time to live for cache in ms (default: 1 hour)
+   */
+  constructor(browser, options = {}) {
     this.browser = browser;
     this.baseUrl = 'https://www.daangn.com';
     this.searchPath = '/kr/buy-sell/';
     this.region = process.env.DANGGEUN_REGION || '마장동-56';
+
+    // Initialize cache manager
+    this.cache = new CacheManager({
+      cacheDir: options.cacheDir || './cache/danggeun',
+      defaultTTL: options.cacheTTL || 60 * 60 * 1000, // 1 hour
+      enabled: options.useCache !== false // enabled by default
+    });
   }
+
   /**
-     * @param {string} query - Search term
-     * @param {number} limit - Maximum number of products to return
-     */
-  async searchProducts(query, limit = 20) {
+   * @param {string} query - Search term
+   * @param {number} limit - Maximum number of products to return
+   * @param {boolean} forceRefresh - Force refresh cache
+   */
+  async searchProducts(query, limit = 20, forceRefresh = false) {
+    // Generate cache key
+    const cacheKey = this.cache.generateKey('danggeun', 'search', { query, limit });
+
+    // Try to get from cache first if not forcing refresh
+    if (!forceRefresh) {
+      const cachedResults = this.cache.get(cacheKey);
+      if (cachedResults) {
+        console.log(`Using cached results for Danggeun search: ${query}`);
+        return cachedResults;
+      }
+    }
+
     const browser = await puppeteer.launch({
       headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-spdy'],
@@ -82,6 +111,13 @@ export default class DanggeunScraper {
           });
         }
       });
+
+      // Cache successful results
+      if (products.length > 0) {
+        this.cache.set(cacheKey, products);
+        console.log(`Cached ${products.length} Danggeun results for: ${query}`);
+      }
+
       await page.close();
       return products;
     } catch (err) {
@@ -90,5 +126,21 @@ export default class DanggeunScraper {
     } finally {
       // await browser.close();
     }
+  }
+
+  /**
+   * Clear the entire cache
+   * @returns {number} Number of entries cleared
+   */
+  clearCache() {
+    return this.cache.clear();
+  }
+
+  /**
+   * Get cache statistics
+   * @returns {Object} Cache stats
+   */
+  getCacheStats() {
+    return this.cache.getStats();
   }
 }
