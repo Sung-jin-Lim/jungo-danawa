@@ -1,0 +1,49 @@
+# Task ID: 5
+# Title: Web Scraping System Enhancement for Bunjang and Junggonara
+# Status: done
+# Dependencies: 4
+# Priority: high
+# Description: Optimize the existing implemented scrapers for Bunjang and Junggonara platforms with improved resilience, image extraction, and standardized output.
+# Details:
+Enhance the existing Bunjang and Junggonara scrapers with the following optimizations:
+
+1. Apply the same image extraction improvements that were implemented in the Danggeun scraper
+2. Implement platform-specific error handling and recovery mechanisms
+3. Add more sophisticated anti-blocking measures including proxy rotation
+4. Optimize performance by implementing targeted resource loading (only load necessary elements)
+5. Standardize data output format to ensure consistency across all scrapers (Danggeun, Bunjang, and Junggonara)
+
+# Test Strategy:
+Test enhanced scraping on both platforms with various search terms. Verify improved image extraction matches Danggeun scraper quality. Test error recovery by simulating common failure scenarios. Validate proxy rotation effectiveness against blocking. Measure performance improvements with resource loading optimization. Ensure data output conforms to the standardized format across all platforms.
+
+# Subtasks:
+## 5.1. Implement Danggeun image extraction techniques [done]
+### Dependencies: None
+### Description: Port the successful image extraction methods from the Danggeun scraper to both Bunjang and Junggonara scrapers
+### Details:
+
+
+## 5.2. Develop platform-specific error handling [done]
+### Dependencies: None
+### Description: Create custom error handlers for common failure points specific to Bunjang and Junggonara platforms
+### Details:
+
+
+## 5.3. Implement proxy rotation system [done]
+### Dependencies: None
+### Description: Add proxy rotation capabilities to avoid IP blocking and implement request throttling specific to each platform's limitations
+### Details:
+
+
+## 5.4. Optimize resource loading [done]
+### Dependencies: None
+### Description: Modify scrapers to only load essential resources needed for data extraction, reducing bandwidth and improving performance
+### Details:
+
+
+## 5.5. Standardize data output format [done]
+### Dependencies: None
+### Description: Refine data normalization functions to ensure consistent output format across all scrapers in the system
+### Details:
+
+
