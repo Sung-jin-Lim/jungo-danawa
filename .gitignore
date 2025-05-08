@@ -1,0 +1,54 @@
+# Node modules
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependency directories
+backend/node_modules/
+frontend/node_modules/
+
+# Build output
+backend/dist/
+frontend/dist/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Cache and debug
+cache/
+backend/cache/
+debug/
+
+# Environment files
+.env
+.env.*
+
+# IDE and editor folders
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Misc
+*.log
+*.tgz
+
+# Test output
+coverage/
+
+# Frontend build
+frontend/public/build/
+
+# Ignore local tasks
+.tasks/
+
+# Ignore by name
+*.local.js
+
+# Ignore backend scrapers output (if any)
+backend/scrapers/output/ 
