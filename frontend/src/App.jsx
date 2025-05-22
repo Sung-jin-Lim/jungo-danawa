@@ -20,7 +20,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
-        <Header />
+        {/* <Header /> */}
         <main>
           <Routes>
             <Route path="/" element={<HomePage />} />
